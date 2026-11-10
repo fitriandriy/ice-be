@@ -33,7 +33,7 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       tempo: {
-        type: DataTypes.INTEGER,
+        type: Sequelize.INTEGER,
         allowNull: true,
       },
     });

@@ -169,7 +169,14 @@ module.exports = {
           account_number: item.bank_account?.account_number || null
         },
         quantity: item.sales_item.reduce(
-          (total, r) => total + Number(r.quantity), 0
+          (total, r) =>
+            total +
+            (r.product_id === 1
+              ? Number(r.quantity) * 10
+              : r.product_id === 2
+                ? Number(r.quantity) * 5
+                : 0),
+          0
         ),
         total_price: item.sales_item.reduce(
           (total, r) => total + (Number(r.price) * Number(r.quantity)), 0
@@ -224,7 +231,9 @@ module.exports = {
       }
 
       const deleteData = await sales.destroy({where: {id}})
-      const deleteItems = await sales_items.destroy({ where: {transaction_number : id}})
+      const deleteItems = await sales_items.destroy({ where: {transaction_id : id}})
+      const deletePayments = await sale_payments.destroy({ where: {sales_id : id}})
+      const deleteCosts = await costs.destroy({ where: {transaction_number : data.transaction_number}})
 
       return res.status(200).json({
         status: true,
