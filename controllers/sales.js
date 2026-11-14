@@ -1,4 +1,5 @@
-const { Op, Sequelize } = require("sequelize");
+const { Op, QueryTypes } = require("sequelize");
+const { sequelize } = require("../config/postgres")
 const { drivers, bank_accounts, customers, products, sales, sales_items, costs, sale_payments } = require("../db/models")
 
 const formatDate = (dateString) => {
@@ -286,12 +287,42 @@ module.exports = {
         )
       );
 
+      // create no transaction
+      const latest_id = await sequelize.query(`
+          select transaction_number from costs
+          where date = :date
+          order by transaction_number DESC limit 1
+        `,
+        {
+          replacements: { date: data.date },
+          type: QueryTypes.SELECT,
+          transaction: t
+        }
+      )
+
+      // ON PROGRESS!!!!
+      const d = new Date(data.date);
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = String(d.getFullYear()).slice(-2);
+
+      const prefix = `N${day}${month}${year}`;
+      let noTrans = "";
+
+      if (latest_id.length < 1) {
+        noTrans = `${prefix}-001`;
+      } else {
+        const lastNumber = Number(latest_id[0].transaction_number.split("-")[1]);
+        const nextNumber = String(lastNumber + 1).padStart(3, "0");
+        noTrans = `${prefix}-${nextNumber}`;
+      }
+
       // Jika transaksi lunas, catat pembayaran
       if (data.status === "lunas") {
         await costs.create(
           {
             date: data.date,
-            transaction_number: transactionNumber,
+            transaction_number: noTrans,
             description: `PEMB. ${transactionNumber}`,
             debit: data.total,
             bank_account_id: data.bank_account_id,
